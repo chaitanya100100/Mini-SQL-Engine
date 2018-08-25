@@ -93,6 +93,8 @@ def get_output_table(qdict):
     cond_op = qdict['cond_op']
     proj_cols = qdict['proj_cols']
 
+    # load all tables and retain only necessary columns
+    # also decide the indexes of intermediate table columns
     colidx = {}
     cnt = 0
     all_tables = []
@@ -106,14 +108,11 @@ def get_output_table(qdict):
         colidx[t] = {cname: cnt+i for i, cname in enumerate(inter_cols[t])}
         cnt += len(inter_cols[t])
 
-
-    # inter_table = []
-    # for r in itertools.product(*all_tables):
-    #     row = [i for tup in r for i in list(tup)]
-    #     inter_table.append(row)
+    # cartesian product of all tables
     inter_table = [[i for tup in r for i in list(tup)] for r in itertools.product(*all_tables)]
     inter_table = np.array(inter_table)
 
+    # check for conditions and get reduced table
     if len(conditions):
         totake = np.ones((inter_table.shape[0],len(conditions)), dtype=bool)
 
@@ -138,6 +137,7 @@ def get_output_table(qdict):
     select_idxs = [colidx[tn][cn] for tn, cn, aggr in proj_cols]
     inter_table = inter_table[:, select_idxs]
 
+    # process for aggregate function
     if proj_cols[0][2]:
         out_table = []
         disti = False
@@ -158,12 +158,10 @@ def get_output_table(qdict):
         out_header = [cn for tn, cn, aggr in proj_cols]
     return out_header, out_table.tolist()
 
-def parse_query(q):
-    toks = q.lower().split()
-    # toks = q.split()
-
+def break_query(q):
     # check the structure of select, from and where
     # ----------------------------------------------
+    toks = q.lower().split()
     if toks[0] != "select":
         log_error("only select is allowed")
 
@@ -188,7 +186,9 @@ def parse_query(q):
     errorif(len(raw_tables) == 0, "no tables after 'from'")
     errorif(where_idx != None and len(raw_condition) == 0, "no conditions after 'where'")
     # ----------------------------------------------
+    return raw_tables, raw_cols, raw_condition
 
+def parse_tables(raw_tables):
     # all joined tables
     # ----------------------------------------------
     raw_tables = " ".join(raw_tables).split(",")
@@ -206,8 +206,9 @@ def parse_query(q):
         tables.append(tb_alias)
         alias2tb[tb_alias] = tb_name
     # ----------------------------------------------
+    return tables, alias2tb
 
-
+def parse_proj_cols(raw_cols, tables, alias2tb):
     # projection columns : columns to output
     # ----------------------------------------------
     raw_cols = "".join(raw_cols).split(",")
@@ -251,7 +252,9 @@ def parse_query(q):
     errorif(all(s) ^ any(s), "aggregated and nonaggregated columns are not allowed simultaneously")
     errorif(any([(a=="distinct") for a in s]) and len(s)!=1, "distinct can only be used alone")
     # ----------------------------------------------
+    return proj_cols
 
+def parse_conditions(raw_condition, tables, alias2tb):
     # parse conditions
     # ----------------------------------------------
     conditions = []
@@ -286,6 +289,19 @@ def parse_query(q):
                 parsed_cond.append((tname, cname))
             conditions.append(parsed_cond)
     # ----------------------------------------------
+    return conditions, cond_op
+
+
+def parse_query(q):
+
+    # break query
+    raw_tables, raw_cols, raw_condition = break_query(q)
+    # get tables
+    tables, alias2tb = parse_tables(raw_tables)
+    # get columns to be projected
+    proj_cols = parse_proj_cols(raw_cols, tables, alias2tb)
+    # get conditions
+    conditions, cond_op = parse_conditions(raw_condition, tables, alias2tb)
 
     # decide all needed columns for each table
     # ----------------------------------------------
@@ -298,7 +314,6 @@ def parse_query(q):
 
     for t in tables: inter_cols[t] = list(inter_cols[t])
     # ----------------------------------------------
-
 
     return {
         'tables':tables,
@@ -323,11 +338,11 @@ def main():
         print("USAGE : python {} '<sql query>'".format(sys.argv[0]))
         exit(-1)
     q = sys.argv[1]
+
     qdict = parse_query(q)
-
     out_header, out_table = get_output_table(qdict)
-    print_table(out_header, out_table)
 
+    print_table(out_header, out_table)
     # inter_header, inter_table = get_inter_table(qdict)
 
 
