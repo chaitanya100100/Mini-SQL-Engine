@@ -2,17 +2,17 @@
 A mini SQL engine to parse and execute simple sql queries implemented in python
 
 ## Description
-- ![files][files/] directory contains the database and its schema.
-- ![files/metadata.txt][metadata.txt] contains the schema of the database. Each table's schema is given between <begin_table> and <end_table>. The first line is the name of the table and others lines are field(column) names.
-- Data stored in each table is given as csv file in ![files][files/] directory of the same name as of the table. For example, the data of table 'table1' is given as 'table1.csv'.
-- Main source code is in ![files/mini_sql.py][files/mini_sql.py]
+- ![files](files/) directory contains the database and its schema.
+- ![files/metadata.txt](files/metadata.txt) contains the schema of the database. Each table's schema is given between <begin_table> and <end_table>. The first line is the name of the table and others lines are field(column) names.
+- Data stored in each table is given as csv file in ![files](files/) directory of the same name as of the table. For example, the data of table 'table1' is given as 'table1.csv'.
+- Main source code is in ![files/mini_sql.py](files/mini_sql.py)
 - Database contains only integer data.
 - Queries are entirely case insensitive.
 - Only simple queries can be performed. Nested queries are not allowed.
 - Error handling is implemented with sufficient error debugging details.
 
 ### Run Query
-Inside ![src][src/] directory, run `python mini_sql.py "<sql_query>"`
+Inside ![src](src/) directory, run `python mini_sql.py "<sql_query>"`
 
 #### Valid queries
 - Normal select queries
