@@ -17,7 +17,7 @@ schema = {}
 
 def errorif(x, s):
     if x:
-        assert not x, s
+        # assert not x, s
         print("ERROR : {}".format(s))
         exit(-1)
 
@@ -148,14 +148,17 @@ def get_output_table(qdict):
             elif aggr == "sum": out_table.append(sum(col))
             elif aggr == "avg": out_table.append(sum(col)/col.shape[0])
             elif aggr == "count": out_table.append(col.shape[0])
-            elif aggr == "distinct": out_table =  np.unique(col)[np.newaxis].T.tolist() ; disti = True
+            elif aggr == "distinct":
+                seen = set()
+                out_table = [x for x in col.tolist() if not (x in seen or seen.add(x) )]
+                disti = True
             else: errorif(True, "invalid aggregate")
         out_table = np.array([out_table])
-        if disti: out_table = out_table[0]
+        if disti: out_table = np.array(out_table).T
         out_header = ["{}({}.{})".format(aggr, tn, cn) for tn, cn, aggr in proj_cols]
     else:
         out_table = inter_table
-        out_header = [cn for tn, cn, aggr in proj_cols]
+        out_header = ["{}.{}".format(tn, cn) for tn, cn, aggr in proj_cols]
     return out_header, out_table.tolist()
 
 def break_query(q):
